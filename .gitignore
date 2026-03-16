@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.production
+
+# Test/debug scripts
+backend/dbtest.js
+backend/schema_check.js
+backend/dbout.txt
+backend/schemaout.txt
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Vite cache
+.vite/

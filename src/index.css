@@ -1,0 +1,415 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── GLOBAL DIRECTION LOCK — must be outside @layer to win the cascade ── */
+html,
+body,
+input,
+textarea {
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+  writing-mode: horizontal-tb !important;
+  text-align: left !important;
+}
+
+@layer base {
+  :root {
+    /* Pure black base */
+    --background: 0 0% 2%;
+    --foreground: 120 100% 75%;
+
+    --card: 0 0% 4%;
+    --card-foreground: 120 100% 75%;
+
+    --popover: 0 0% 4%;
+    --popover-foreground: 120 100% 75%;
+
+    /* Neon green primary */
+    --primary: 120 100% 50%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 7%;
+    --secondary-foreground: 120 60% 60%;
+
+    --muted: 0 0% 6%;
+    --muted-foreground: 120 30% 40%;
+
+    --accent: 120 100% 50%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 120 70% 18%;
+    --input: 0 0% 6%;
+    --ring: 120 100% 50%;
+
+    --radius: 0.25rem;
+
+    --glow-primary: 0 0 12px #00ff41, 0 0 24px #00ff4166;
+    --glow-primary-strong: 0 0 20px #00ff41, 0 0 40px #00ff4188, 0 0 60px #00ff4133;
+
+    --font-mono: 'Share Tech Mono', 'JetBrains Mono', monospace;
+    --font-display: 'Share Tech Mono', monospace;
+
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 120 100% 75%;
+    --sidebar-primary: 120 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 7%;
+    --sidebar-accent-foreground: 120 60% 60%;
+    --sidebar-border: 120 70% 18%;
+    --sidebar-ring: 120 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    background: #050505;
+    color: #00ff41;
+    font-family: var(--font-mono);
+    overflow-x: hidden;
+    direction: ltr !important;
+    unicode-bidi: normal !important;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-mono);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #050505;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #00ff4155;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #00ff41;
+  }
+
+  ::selection {
+    background: #00ff4133;
+    color: #00ff41;
+  }
+}
+
+@layer utilities {
+
+  /* ── Phosphor green glow ── */
+  .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+
+  .glow-primary-strong {
+    box-shadow: var(--glow-primary-strong);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 8px #00ff41, 0 0 20px #00ff4188;
+  }
+
+  .text-glow-sm {
+    text-shadow: 0 0 6px #00ff4199;
+  }
+
+  /* ── CRT scanlines overlay ── */
+  .scanline {
+    position: relative;
+  }
+
+  .scanline::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 255, 65, 0.025) 2px,
+        rgba(0, 255, 65, 0.025) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── Terminal card border ── */
+  .gradient-border {
+    border: 1px solid #00ff4133;
+    position: relative;
+    background-clip: padding-box;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #00ff4166, #00ff4111, #00ff4166);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ── Corner bracket decoration ── */
+  .terminal-card {
+    position: relative;
+    border: 1px solid #00ff4144;
+    background: rgba(0, 0, 0, 0.85);
+  }
+
+  .terminal-card::before,
+  .terminal-card::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: #00ff41;
+    border-style: solid;
+  }
+
+  .terminal-card::before {
+    top: -1px;
+    left: -1px;
+    border-width: 2px 0 0 2px;
+  }
+
+  .terminal-card::after {
+    bottom: -1px;
+    right: -1px;
+    border-width: 0 2px 2px 0;
+  }
+
+  /* ── Glitch text animation ── */
+  @keyframes glitch {
+
+    0%,
+    100% {
+      text-shadow: 0 0 8px #00ff41, 0 0 20px #00ff4188;
+      clip-path: none;
+      transform: none;
+    }
+
+    2% {
+      text-shadow: 2px 0 #ff003c, -2px 0 #00ff41;
+      transform: translate(-2px, 0);
+    }
+
+    4% {
+      text-shadow: -2px 0 #ff003c, 2px 0 #00ff41;
+      transform: translate(2px, 0);
+    }
+
+    6% {
+      text-shadow: 0 0 8px #00ff41;
+      transform: none;
+    }
+
+    96% {
+      text-shadow: 0 0 8px #00ff41;
+      transform: none;
+    }
+
+    98% {
+      text-shadow: -2px 0 #ff003c, 2px 0 #00ff41;
+      transform: translate(1px, 0);
+    }
+  }
+
+  .glitch {
+    animation: glitch 6s infinite;
+  }
+
+  /* ── Cursor blink ── */
+  @keyframes blink {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .cursor-blink::after {
+    content: '█';
+    animation: blink 1s step-end infinite;
+    color: #00ff41;
+    margin-left: 2px;
+  }
+
+  /* ── Fade-in ── */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease forwards;
+  }
+
+  /* ── Pulse glow ── */
+  @keyframes pulse-glow {
+
+    0%,
+    100% {
+      box-shadow: 0 0 6px #00ff41;
+      opacity: 1;
+    }
+
+    50% {
+      box-shadow: 0 0 16px #00ff41, 0 0 30px #00ff4166;
+      opacity: 0.7;
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* ── Fade in up ── */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Glitch flicker ── */
+  @keyframes glitchFlicker {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) skewX(0);
+    }
+
+    10% {
+      opacity: 1;
+      transform: translate(-2px, 1px) skewX(-2deg);
+    }
+
+    20% {
+      opacity: 0.8;
+      transform: translate(2px, -1px) skewX(1deg);
+    }
+
+    30% {
+      opacity: 1;
+      transform: translate(-1px, 0) skewX(0);
+    }
+
+    40% {
+      opacity: 0.6;
+      transform: translate(3px, 1px) skewX(-1deg);
+    }
+
+    50% {
+      opacity: 1;
+      transform: translate(0, 0) skewX(0);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translate(0, 0) skewX(0);
+    }
+  }
+
+  /* ── Scan bar sweep ── */
+  @keyframes scanSweep {
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* ── Blink cursor ── */
+  @keyframes blink {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* ── Utility classes ── */
+  .anim-fadeInUp {
+    animation: fadeInUp 0.5s ease-out both;
+  }
+
+  .anim-delay-1 {
+    animation-delay: 0.1s;
+  }
+
+  .anim-delay-2 {
+    animation-delay: 0.2s;
+  }
+
+  .anim-delay-3 {
+    animation-delay: 0.3s;
+  }
+
+  .anim-delay-4 {
+    animation-delay: 0.4s;
+  }
+
+  .anim-delay-5 {
+    animation-delay: 0.5s;
+  }
+
+  .anim-delay-6 {
+    animation-delay: 0.6s;
+  }
+
+  .anim-delay-7 {
+    animation-delay: 0.7s;
+  }
+
+  .anim-glitch {
+    animation: glitchFlicker 0.8s ease-out both;
+    animation-delay: 0.3s;
+  }
+
+  /* ── Mobile hide utility ── */
+  @media (max-width: 640px) {
+    .mobile-hide {
+      display: none !important;
+    }
+  }
+}

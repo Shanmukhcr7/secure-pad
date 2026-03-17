@@ -35,6 +35,10 @@ async function initDB() {
             catch (e) { if (e.errno !== 1060) throw e; }
         }
 
+        // Migration: ensure user_id and note_title are always nullable (fix NOT NULL from earlier schemas)
+        try { await exec('ALTER TABLE notes MODIFY COLUMN user_id INT DEFAULT NULL'); } catch (_) {}
+        try { await exec('ALTER TABLE notes MODIFY COLUMN note_title VARCHAR(512) DEFAULT NULL'); } catch (_) {}
+
         await exec(`CREATE TABLE IF NOT EXISTS attachments (
             id           INT AUTO_INCREMENT PRIMARY KEY,
             note_key     VARCHAR(512) NOT NULL,
@@ -216,8 +220,10 @@ app.post('/api/notes', async (req, res) => {
     }
 
     try {
-        await pool.execute(
-            `INSERT INTO notes (note_key, encrypted_content, created_at, expiry_time, one_time_view, viewed, user_id, note_title)
+        if (userId !== null) {
+            // Logged-in user: link pad to account
+            await pool.execute(
+                `INSERT INTO notes (note_key, encrypted_content, created_at, expiry_time, one_time_view, viewed, user_id, note_title)
        VALUES (?, ?, ?, ?, ?, FALSE, ?, ?)
        ON DUPLICATE KEY UPDATE
          encrypted_content = VALUES(encrypted_content),
@@ -227,8 +233,22 @@ app.post('/api/notes', async (req, res) => {
          viewed = FALSE,
          user_id = COALESCE(user_id, VALUES(user_id)),
          note_title = COALESCE(note_title, VALUES(note_title))`,
-            [key, encryptedContent, Date.now(), expiryTime, oneTimeView, userId, noteTitle]
-        );
+                [key, encryptedContent, Date.now(), expiryTime, oneTimeView, userId, noteTitle]
+            );
+        } else {
+            // Anonymous pad: omit user_id/note_title columns entirely
+            await pool.execute(
+                `INSERT INTO notes (note_key, encrypted_content, created_at, expiry_time, one_time_view, viewed)
+       VALUES (?, ?, ?, ?, ?, FALSE)
+       ON DUPLICATE KEY UPDATE
+         encrypted_content = VALUES(encrypted_content),
+         created_at = VALUES(created_at),
+         expiry_time = VALUES(expiry_time),
+         one_time_view = VALUES(one_time_view),
+         viewed = FALSE`,
+                [key, encryptedContent, Date.now(), expiryTime, oneTimeView]
+            );
+        }
         res.json({ success: true });
     } catch (err) {
         console.error(err);

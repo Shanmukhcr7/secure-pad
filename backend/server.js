@@ -4,7 +4,6 @@ require('dotenv').config();
 
 const pool = require('./db');
 const { upload, cloudinary } = require('./upload');
-const pdfParse = require('pdf-parse');
 
 const app = express();
 app.use(cors());
@@ -527,6 +526,7 @@ app.post('/api/parse-pdf', async (req, res) => {
         if (!response.ok) throw new Error(`Failed to fetch file: ${response.statusText}`);
         
         const arrayBuffer = await response.arrayBuffer();
+        const pdfParse = require('pdf-parse');
         const parseFn = typeof pdfParse === 'function' ? pdfParse : pdfParse.default;
         const pdfData = await parseFn(Buffer.from(arrayBuffer));
         

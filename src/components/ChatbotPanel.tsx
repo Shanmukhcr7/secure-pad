@@ -1,12 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 // @ts-ignore
-import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore
 import * as mammoth from 'mammoth';
-
-// Initialize PDF.js Web Worker natively for Vite (resolves cross-origin and bundling issues)
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -102,17 +97,14 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
         contextStr += `\n--- FILE: ${att.filename} (${att.file_type}) ---\n`;
         try {
           if (ext === 'pdf' || att.file_type === 'application/pdf') {
-            const res = await fetch(att.url);
-            const arrayBuffer = await res.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
-            const pdf = await loadingTask.promise;
-            let fullText = '';
-            for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) { // limit to 10 pages for speed
-               const page = await pdf.getPage(i);
-               const content = await page.getTextContent();
-               fullText += content.items.map((it: any) => it.str).join(' ') + '\n';
-            }
-            contextStr += fullText.substring(0, 15000); // limit chars
+            const parseRes = await fetch('/api/parse-pdf', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: att.url })
+            });
+            if (!parseRes.ok) throw new Error('PDF backend parse failed');
+            const data = await parseRes.json();
+            contextStr += (data.text || '').substring(0, 15000);
           } else if (ext === 'docx') {
             const res = await fetch(att.url);
             const arrayBuffer = await res.arrayBuffer();
@@ -318,8 +310,8 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
         }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#00ff41', boxShadow: '0 0 8px #00ff41' }} />
           <div>
-            <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#00ff41', fontWeight: 600, letterSpacing: 1 }}>MISTRAL_AI</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#1a8c3c' }}>Contextually aware neural link</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#00ff41', fontWeight: 600, letterSpacing: 1 }}>PAD_AI</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#1a8c3c' }}>Your intelligent pad assistant</div>
           </div>
         </div>
 

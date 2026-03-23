@@ -531,13 +531,13 @@ app.post('/api/chat', async (req, res) => {
     const invokeUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
     
     const payload = {
-        model: "mistralai/mistral-small-4-119b-2603",
-        reasoning_effort: "high",
+        model: "qwen/qwen3.5-122b-a10b",
         messages,
         max_tokens: 16384,
-        temperature: 0.10,
-        top_p: 1.00,
-        stream: true
+        temperature: 0.60,
+        top_p: 0.95,
+        stream: true,
+        chat_template_kwargs: { "enable_thinking": true }
     };
 
     const https = require('https');

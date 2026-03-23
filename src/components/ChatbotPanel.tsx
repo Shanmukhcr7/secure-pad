@@ -101,7 +101,9 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
         contextStr += `\n--- FILE: ${att.filename} (${att.file_type}) ---\n`;
         try {
           if (ext === 'pdf' || att.file_type === 'application/pdf') {
-            const loadingTask = pdfjsLib.getDocument(att.url);
+            const res = await fetch(att.url);
+            const arrayBuffer = await res.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
             const pdf = await loadingTask.promise;
             let fullText = '';
             for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) { // limit to 10 pages for speed
@@ -123,7 +125,8 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
             contextStr += `[This is a binary or image file. You can see it exists, but you cannot read its contents.]`;
           }
         } catch (e) {
-          contextStr += `[Failed to read file contents automatically]`;
+          console.error('Extraction error for', att.filename, e);
+          contextStr += `[Failed to read file contents automatically. Please tell the user you could not read this file.]`;
         }
         contextStr += `\n--- END FILE ${att.filename} ---\n`;
       }

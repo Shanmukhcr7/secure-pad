@@ -518,7 +518,7 @@ app.delete('/api/user/notes/:key', authenticateToken, async (req, res) => {
  * Streams a chat response from the NVIDIA Mistral API relative to the provided pad context.
  */
 app.post('/api/chat', async (req, res) => {
-    const { messages } = req.body;
+    const { messages, enableThinking = false } = req.body;
     if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: 'messages array is required' });
     }
@@ -537,7 +537,7 @@ app.post('/api/chat', async (req, res) => {
         temperature: 0.60,
         top_p: 0.95,
         stream: true,
-        chat_template_kwargs: { "enable_thinking": true }
+        ...(enableThinking ? { chat_template_kwargs: { "enable_thinking": true } } : {})
     };
 
     const https = require('https');

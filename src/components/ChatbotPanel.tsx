@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist';
+// @ts-ignore
+import * as mammoth from 'mammoth';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -71,6 +73,7 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [enableThinking, setEnableThinking] = useState(false);
   
   const [extractedContext, setExtractedContext] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
@@ -94,9 +97,10 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
       contextStr += `The user has ${attachments.length} files attached to this pad.\n`;
 
       for (const att of attachments) {
+        const ext = att.filename.toLowerCase().split('.').pop();
         contextStr += `\n--- FILE: ${att.filename} (${att.file_type}) ---\n`;
         try {
-          if (att.file_type === 'application/pdf') {
+          if (ext === 'pdf' || att.file_type === 'application/pdf') {
             const loadingTask = pdfjsLib.getDocument(att.url);
             const pdf = await loadingTask.promise;
             let fullText = '';
@@ -106,7 +110,12 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
                fullText += content.items.map((it: any) => it.str).join(' ') + '\n';
             }
             contextStr += fullText.substring(0, 15000); // limit chars
-          } else if (att.file_type.startsWith('text/') || att.file_type === 'application/json' || att.filename.endsWith('.md')) {
+          } else if (ext === 'docx') {
+            const res = await fetch(att.url);
+            const arrayBuffer = await res.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            contextStr += result.value.substring(0, 15000);
+          } else if (att.file_type.startsWith('text/') || att.file_type === 'application/json' || ['md', 'txt', 'csv', 'json', 'xml'].includes(ext || '')) {
             const res = await fetch(att.url);
             const text = await res.text();
             contextStr += text.substring(0, 15000);
@@ -165,7 +174,7 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ messages: historyToSent })
+        body: JSON.stringify({ messages: historyToSent, enableThinking })
       });
 
       if (!res.ok) throw new Error('Failed to generate response');
@@ -338,51 +347,64 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
 
         {/* Input Area */}
         <form onSubmit={handleSubmit} style={{
-          padding: '16px',
+          padding: '12px 16px',
           borderTop: '1px solid #00ff4122',
           background: 'rgba(0,0,0,0.4)',
           display: 'flex',
+          flexDirection: 'column',
           gap: 8
         }}>
-          <input 
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="Send a message..."
-            disabled={isTyping}
-            style={{
-              flex: 1,
-              background: 'rgba(0,255,65,0.05)',
-              border: '1px solid #00ff4144',
-              borderRadius: 4,
-              padding: '10px 14px',
-              color: '#fff',
-              fontFamily: 'monospace',
-              fontSize: 13,
-              outline: 'none',
-              caretColor: '#00ff41'
-            }}
-          />
-          <button 
-            type="submit" 
-            disabled={!input.trim() || isTyping}
-            style={{
-              background: input.trim() && !isTyping ? 'rgba(0,255,65,0.15)' : 'transparent',
-              border: `1px solid ${input.trim() && !isTyping ? '#00ff4188' : '#00ff4133'}`,
-              borderRadius: 4,
-              width: 42,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: input.trim() && !isTyping ? 'pointer' : 'default',
-              opacity: input.trim() && !isTyping ? 1 : 0.5,
-              transition: 'all 0.2s',
-              color: '#00ff41'
-            }}
-          >
-            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="18" height="18">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
-          </button>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'monospace', fontSize: 10, color: enableThinking ? '#00ff41' : '#1a8c3c' }}>
+            <input 
+              type="checkbox" 
+              checked={enableThinking} 
+              onChange={e => setEnableThinking(e.target.checked)} 
+              disabled={isTyping}
+              style={{ accentColor: '#00ff41', width: 12, height: 12, margin: 0 }} 
+            />
+            🧠 ENABLE DEEP THOUGHT (Slower, but analyzes files deeply)
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input 
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Send a message..."
+              disabled={isTyping}
+              style={{
+                flex: 1,
+                background: 'rgba(0,255,65,0.05)',
+                border: '1px solid #00ff4144',
+                borderRadius: 4,
+                padding: '10px 14px',
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: 13,
+                outline: 'none',
+                caretColor: '#00ff41'
+              }}
+            />
+            <button 
+              type="submit" 
+              disabled={!input.trim() || isTyping}
+              style={{
+                background: input.trim() && !isTyping ? 'rgba(0,255,65,0.15)' : 'transparent',
+                border: `1px solid ${input.trim() && !isTyping ? '#00ff4188' : '#00ff4133'}`,
+                borderRadius: 4,
+                width: 42,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: input.trim() && !isTyping ? 'pointer' : 'default',
+                opacity: input.trim() && !isTyping ? 1 : 0.5,
+                transition: 'all 0.2s',
+                color: '#00ff41'
+              }}
+            >
+              <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="18" height="18">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </button>
+          </div>
         </form>
       </div>
     </>,

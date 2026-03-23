@@ -513,6 +513,95 @@ app.delete('/api/user/notes/:key', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to delete note' });
     }
 });
+/**
+ * POST /api/chat
+ * Streams a chat response from the NVIDIA Mistral API relative to the provided pad context.
+ */
+app.post('/api/chat', async (req, res) => {
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: 'messages array is required' });
+    }
+
+    const apiKey = process.env.NVIDIA_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'NVIDIA_API_KEY is not configured on the server' });
+    }
+
+    const invokeUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
+    
+    const payload = {
+        model: "mistralai/mistral-small-4-119b-2603",
+        reasoning_effort: "high",
+        messages,
+        max_tokens: 16384,
+        temperature: 0.10,
+        top_p: 1.00,
+        stream: true
+    };
+
+    const https = require('https');
+
+    try {
+        const payloadStr = JSON.stringify(payload);
+        const options = {
+            method: 'POST',
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Accept": "text/event-stream",
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(payloadStr)
+            }
+        };
+
+        const reqPost = https.request(invokeUrl, options, (apiRes) => {
+            if (apiRes.statusCode !== 200) {
+                let errBody = '';
+                apiRes.on('data', d => errBody += d);
+                apiRes.on('end', () => {
+                    console.error('[CHAT ERROR]', errBody);
+                    res.status(apiRes.statusCode || 500).json({ error: 'Failed to communicate with AI provider' });
+                });
+                return;
+            }
+
+            // Set headers for streaming Server-Sent Events (SSE)
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no'); // Prevent NGINX/Vite buffering
+
+            res.flushHeaders(); // Send headers immediately
+
+            // Write chunks explicitly to bypass any Node/Proxy buffers
+            apiRes.on('data', (chunk) => {
+                res.write(chunk);
+                // If a chunk contains data, flush it straight to the network
+                if (typeof res.flush === 'function') {
+                    res.flush();
+                }
+            });
+
+            apiRes.on('end', () => res.end());
+        });
+
+        reqPost.on('error', (err) => {
+            console.error('[CHAT ERROR Request Error]', err);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Internal server error during chat' });
+            }
+        });
+
+        reqPost.write(payloadStr);
+        reqPost.end();
+        
+    } catch (err) {
+        console.error('[CHAT ERROR]', err);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Internal server error during chat' });
+        }
+    }
+});
 
 const path = require('path');
 

@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
+// @ts-ignore
 import * as mammoth from 'mammoth';
 
 export interface ChatMessage {
@@ -90,8 +92,8 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
     let isMounted = true;
     const processFiles = async () => {
       setIsExtracting(true);
-      // Set worker to CDN matching the installed version
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      // Set worker natively using Vite's URL import to bypass cross-origin browser security
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
       
       let contextStr = '\n\n=== ATTACHMENT CONTEXT ===\n';
       contextStr += `The user has ${attachments.length} files attached to this pad.\n`;

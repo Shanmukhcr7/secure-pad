@@ -1,13 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+// @ts-ignore
+import * as pdfjsLib from 'pdfjs-dist';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
+export interface Attachment {
+  id: number;
+  filename: string;
+  url: string;
+  file_type: string;
+  size_bytes: number;
+}
+
 interface ChatbotPanelProps {
   padContent: string;
+  attachments?: Attachment[];
 }
 
 function parseSSEStream(reader: ReadableStreamDefaultReader<Uint8Array>, onChunk: (text: string) => void, onDone: () => void) {
@@ -55,14 +66,69 @@ function parseSSEStream(reader: ReadableStreamDefaultReader<Uint8Array>, onChunk
   processStream();
 }
 
-export default function ChatbotPanel({ padContent }: ChatbotPanelProps) {
+export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   
+  const [extractedContext, setExtractedContext] = useState('');
+  const [isExtracting, setIsExtracting] = useState(false);
+
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   
+  // Background File Extraction
+  useEffect(() => {
+    if (!attachments || attachments.length === 0) {
+      setExtractedContext('');
+      return;
+    }
+
+    let isMounted = true;
+    const processFiles = async () => {
+      setIsExtracting(true);
+      // Set worker to CDN matching the installed version
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      
+      let contextStr = '\n\n=== ATTACHMENT CONTEXT ===\n';
+      contextStr += `The user has ${attachments.length} files attached to this pad.\n`;
+
+      for (const att of attachments) {
+        contextStr += `\n--- FILE: ${att.filename} (${att.file_type}) ---\n`;
+        try {
+          if (att.file_type === 'application/pdf') {
+            const loadingTask = pdfjsLib.getDocument(att.url);
+            const pdf = await loadingTask.promise;
+            let fullText = '';
+            for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) { // limit to 10 pages for speed
+               const page = await pdf.getPage(i);
+               const content = await page.getTextContent();
+               fullText += content.items.map((it: any) => it.str).join(' ') + '\n';
+            }
+            contextStr += fullText.substring(0, 15000); // limit chars
+          } else if (att.file_type.startsWith('text/') || att.file_type === 'application/json' || att.filename.endsWith('.md')) {
+            const res = await fetch(att.url);
+            const text = await res.text();
+            contextStr += text.substring(0, 15000);
+          } else {
+            contextStr += `[This is a binary or image file. You can see it exists, but you cannot read its contents.]`;
+          }
+        } catch (e) {
+          contextStr += `[Failed to read file contents automatically]`;
+        }
+        contextStr += `\n--- END FILE ${att.filename} ---\n`;
+      }
+      
+      if (isMounted) {
+        setExtractedContext(contextStr);
+        setIsExtracting(false);
+      }
+    };
+
+    processFiles();
+    return () => { isMounted = false; };
+  }, [attachments]);
+
   useEffect(() => {
     if (endOfMessagesRef.current) {
       endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -80,10 +146,10 @@ export default function ChatbotPanel({ padContent }: ChatbotPanelProps) {
     const convo: ChatMessage[] = [];
     
     // Inject system context invisibly 
-    if (padContent) {
+    if (padContent || extractedContext) {
       convo.push({ 
         role: 'system', 
-        content: `You are a helpful AI assistant built natively into SECURE_PAD. The user is currently editing a secure encrypted pad. Here is the current contents of their pad for context:\n\n=== PAD START ===\n${padContent}\n=== PAD END ===\n\nIf the user asks questions, answer them based on this pad context. Address the user normally and politely. Do not use spy or hacker roleplay terms like "agent" or "operative". Keep your answers concise and formatted in markdown.` 
+        content: `You are a helpful AI assistant built natively into SECURE_PAD. The user is currently editing a secure encrypted pad. Here is the current contents of their pad for context:\n\n=== PAD START ===\n${padContent}\n=== PAD END ===\n${extractedContext}\nIf the user asks questions, answer them based on this pad context. Address the user normally and politely. Do not use spy or hacker roleplay terms like "agent" or "operative". Keep your answers concise and formatted in markdown.` 
       });
     }
 
@@ -226,6 +292,12 @@ export default function ChatbotPanel({ padContent }: ChatbotPanelProps) {
               <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#00ff41', lineHeight: 1.5 }}>
                 Connection established.<br/>
                 I can see your pad contents.<br/>
+                {isExtracting ? (
+                  <span style={{ color: '#00ff41', opacity: 0.7 }}>[Reading attachments...]</span>
+                ) : extractedContext ? (
+                  <span style={{ color: '#00ff41' }}>[Attachments loaded into context]</span>
+                ) : null}
+                <br/><br/>
                 Query me.
               </div>
             </div>

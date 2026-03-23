@@ -521,7 +521,7 @@ export default function PadView() {
       </div>
 
       {/* AI Assistant Chatbot */}
-      {phase === 'editor' && <ChatbotPanel padContent={content} />}
+      {phase === 'editor' && <ChatbotPanel padContent={content} attachments={attachments} />}
     </div>
   );
 }

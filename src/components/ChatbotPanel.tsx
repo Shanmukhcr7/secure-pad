@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
-// @ts-ignore
 import * as mammoth from 'mammoth';
+
+// Initialize PDF.js Web Worker natively for Vite (resolves cross-origin and bundling issues)
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -92,8 +93,6 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
     let isMounted = true;
     const processFiles = async () => {
       setIsExtracting(true);
-      // Set worker natively using Vite's URL import to bypass cross-origin browser security
-      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
       
       let contextStr = '\n\n=== ATTACHMENT CONTEXT ===\n';
       contextStr += `The user has ${attachments.length} files attached to this pad.\n`;

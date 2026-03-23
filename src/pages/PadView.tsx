@@ -3,6 +3,7 @@ import { Link, useParams, useLocation } from 'react-router-dom';
 import MatrixRain from '@/components/MatrixRain';
 import { noteExists, viewNote, createNote, updateNote, deleteNote } from '@/lib/noteService';
 import { listAttachments, uploadAttachment, deleteAttachment, Attachment } from '@/lib/attachmentService';
+import ChatbotPanel from '@/components/ChatbotPanel';
 
 type Phase = 'loading' | 'editor' | 'deleted' | 'error';
 
@@ -518,6 +519,9 @@ export default function PadView() {
           </div>
         )}
       </div>
+
+      {/* AI Assistant Chatbot */}
+      {phase === 'editor' && <ChatbotPanel padContent={content} />}
     </div>
   );
 }

@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const pool = require('./db');
 const { upload, cloudinary } = require('./upload');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 app.use(cors());
@@ -513,6 +514,29 @@ app.delete('/api/user/notes/:key', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to delete note' });
     }
 });
+/**
+ * POST /api/parse-pdf
+ * Fetches and parses a PDF file natively in Node.js to bypass frontend CORS/Worker strictness
+ */
+app.post('/api/parse-pdf', async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ error: 'URL is required' });
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to fetch file: ${response.statusText}`);
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const parseFn = typeof pdfParse === 'function' ? pdfParse : pdfParse.default;
+        const pdfData = await parseFn(Buffer.from(arrayBuffer));
+        
+        res.json({ text: pdfData.text });
+    } catch (err) {
+        console.error('[PDF PARSE ERROR]', err);
+        res.status(500).json({ error: 'Failed to parse PDF on server' });
+    }
+});
+
 /**
  * POST /api/chat
  * Streams a chat response from the NVIDIA Mistral API relative to the provided pad context.

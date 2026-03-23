@@ -158,12 +158,13 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
     const convo: ChatMessage[] = [];
     
     // Inject system context invisibly 
+    let sysPrompt = `You are a helpful general-purpose AI assistant naturally built into SECURE_PAD. You must answer ANY general knowledge questions the user asks you exactly like ChatGPT would. Address the user politely. Do not use roleplay spy terms like "agent".`;
+    
     if (padContent || extractedContext) {
-      convo.push({ 
-        role: 'system', 
-        content: `You are a helpful AI assistant built natively into SECURE_PAD. The user is currently editing a secure encrypted pad. Here is the current contents of their pad for context:\n\n=== PAD START ===\n${padContent}\n=== PAD END ===\n${extractedContext}\nIf the user asks questions, answer them based on this pad context. Address the user normally and politely. Do not use spy or hacker roleplay terms like "agent" or "operative". Keep your answers concise and formatted in markdown.` 
-      });
+      sysPrompt += `\n\nIf the user asks questions related to their files or notes, use the following context to help them:\n\n=== PAD CONTEXT START ===\n${padContent}\n=== PAD CONTEXT END ===\n${extractedContext}`;
     }
+    
+    convo.push({ role: 'system', content: sysPrompt });
 
     // Add existing history without the system message
     const historyToSent = [...convo, ...messages, { role: 'user', content: userMessage }] as ChatMessage[];
@@ -216,6 +217,40 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
 
   return createPortal(
     <>
+      {/* Tooltip Bubble pointing at the AI Button */}
+      {!isOpen && messages.length === 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: 40,
+          right: 90,
+          zIndex: 2147483647,
+          background: 'rgba(0,255,65,0.1)',
+          border: '1px solid #00ff41',
+          backdropFilter: 'blur(8px)',
+          color: '#fff',
+          fontFamily: 'monospace',
+          fontSize: 12,
+          padding: '8px 14px',
+          borderRadius: 16,
+          boxShadow: '0 4px 20px rgba(0,255,65,0.2)',
+          pointerEvents: 'none',
+          animation: 'pulse 2s infinite',
+        }}>
+          Need help? <b style={{color: '#00ff41'}}>Ask AI ✨</b>
+          {/* Bubble Pointer Triangle */}
+          <div style={{
+            position: 'absolute',
+            right: -6,
+            bottom: 12,
+            width: 0,
+            height: 0,
+            borderTop: '6px solid transparent',
+            borderBottom: '6px solid transparent',
+            borderLeft: '6px solid #00ff41'
+          }} />
+        </div>
+      )}
+
       {/* Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}

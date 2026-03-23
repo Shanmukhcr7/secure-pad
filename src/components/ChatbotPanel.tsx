@@ -75,6 +75,7 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
   
   const [extractedContext, setExtractedContext] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
+  const [imageDataUrls, setImageDataUrls] = useState<{url: string, name: string}[]>([]);
 
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   
@@ -114,6 +115,22 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
             const res = await fetch(att.url);
             const text = await res.text();
             contextStr += text.substring(0, 15000);
+          } else if (att.file_type.startsWith('image/')) {
+            // Fetch and convert image to base64 for vision support
+            const res = await fetch(att.url);
+            const blob = await res.blob();
+            const base64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            if (isMounted) {
+              setImageDataUrls(prev => {
+                if (prev.find(i => i.name === att.filename)) return prev;
+                return [...prev, { url: base64, name: att.filename }];
+              });
+            }
+            contextStr += `[Image file — sent to the AI vision system for direct visual analysis]`;
           } else {
             contextStr += `[This is a binary or image file. You can see it exists, but you cannot read its contents.]`;
           }
@@ -159,8 +176,20 @@ export default function ChatbotPanel({ padContent, attachments = [] }: ChatbotPa
     
     convo.push({ role: 'system', content: sysPrompt });
 
+    // Build the user message — multimodal if there are images attached
+    let userContent: any = userMessage;
+    if (imageDataUrls.length > 0) {
+      userContent = [
+        { type: 'text', text: userMessage },
+        ...imageDataUrls.map(img => ({
+          type: 'image_url',
+          image_url: { url: img.url }
+        }))
+      ];
+    }
+
     // Add existing history without the system message
-    const historyToSent = [...convo, ...messages, { role: 'user', content: userMessage }] as ChatMessage[];
+    const historyToSent = [...convo, ...messages, { role: 'user', content: userContent }] as ChatMessage[];
     
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsTyping(true);

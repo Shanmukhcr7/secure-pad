@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -133,16 +134,18 @@ export default function ChatbotPanel({ padContent }: ChatbotPanelProps) {
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <>
       {/* Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: 'fixed',
-          bottom: 16,
-          right: 16,
-          zIndex: 9999,
+          bottom: 24,
+          right: 24,
+          zIndex: 2147483647,
           background: isOpen ? 'rgba(0,0,0,0.9)' : 'rgba(0,255,65,0.1)',
           border: `1px solid ${isOpen ? '#00ff4155' : '#00ff41'}`,
           borderRadius: '50%',
@@ -169,12 +172,13 @@ export default function ChatbotPanel({ padContent }: ChatbotPanelProps) {
       {/* Chat Panel */}
       <div style={{
         position: 'fixed',
-        bottom: 84,
-        right: 16,
-        width: 'calc(100vw - 32px)',
+        bottom: 96,
+        right: 24,
+        width: 'calc(100% - 48px)',
         maxWidth: 380,
-        height: 'calc(100vh - 100px)',
+        height: 'calc(100% - 120px)',
         maxHeight: 600,
+        boxSizing: 'border-box',
         background: 'rgba(2,2,2,0.95)',
         backdropFilter: 'blur(16px)',
         border: '1px solid #00ff4133',
@@ -182,7 +186,7 @@ export default function ChatbotPanel({ padContent }: ChatbotPanelProps) {
         boxShadow: '0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(0,255,65,0.1)',
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 9998,
+        zIndex: 2147483646,
         transform: isOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.95)',
         opacity: isOpen ? 1 : 0,
         pointerEvents: isOpen ? 'auto' : 'none',
@@ -309,6 +313,7 @@ export default function ChatbotPanel({ padContent }: ChatbotPanelProps) {
           </button>
         </form>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
